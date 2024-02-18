@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using NetCoreTokenBasedApproach.Data;
+using NetCoreTokenBasedApproach.Data.Helpers;
 using NetCoreTokenBasedApproach.Data.Models;
 using NetCoreTokenBasedApproach.Data.ViewModels;
 using JwtRegisteredClaimNames = Microsoft.IdentityModel.JsonWebTokens.JwtRegisteredClaimNames;
@@ -60,7 +61,22 @@ public class AuthenticationController : ControllerBase
             var result = await _userManager.CreateAsync(newUser, registerVm.Password);
 
             if (result.Succeeded)
+            {
+                // Add User Role
+                switch (registerVm.Role)
+                {
+                    case UserRoles.Manager:
+                        await _userManager.AddToRoleAsync(newUser, UserRoles.Manager);
+                        break;
+                    case UserRoles.Student:
+                        await _userManager.AddToRoleAsync(newUser, UserRoles.Student); 
+                        break;
+                    default:
+                            break;
+                }
+
                 return Ok("User Created");
+            }
             return BadRequest("User not created");
         }
         catch (Exception ex)
@@ -119,16 +135,24 @@ public class AuthenticationController : ControllerBase
         }
     }
 
-    private async Task<AuthResultVM> GenerateJwtTokenAsync(ApplicationUser userExists, RefreshToken rToken)
+    private async Task<AuthResultVM> GenerateJwtTokenAsync(ApplicationUser user, RefreshToken rToken)
     {
         var authClaims = new List<Claim>
         {
-            new(ClaimTypes.Name, userExists.UserName),
-            new(ClaimTypes.NameIdentifier, userExists.Id),
-            new(JwtRegisteredClaimNames.Email, userExists.Email),
-            new(JwtRegisteredClaimNames.Sub, userExists.Email),
+            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.NameIdentifier, user.Id),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Sub, user.Email),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+        // Add User Role Claims
+        var userRoles = await _userManager.GetRolesAsync(user);
+        foreach (var userRole in userRoles)
+        {
+            authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+        }
+
 
         var authSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_configuration["JWT:Secret"]));
 
@@ -154,7 +178,7 @@ public class AuthenticationController : ControllerBase
         {
             JwtId = token.Id,
             IsRevoked = false,
-            UserId = userExists.Id,
+            UserId = user.Id,
             DateAdded = DateTime.UtcNow,
             DateExpire = DateTime.UtcNow.AddMonths(6),
             Token = Guid.NewGuid() + "-" + Guid.NewGuid()
