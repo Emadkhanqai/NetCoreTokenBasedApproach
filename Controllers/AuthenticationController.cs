@@ -104,7 +104,8 @@ public class AuthenticationController : ControllerBase
 
         try
         {
-            var tokenCheckResult = jwtTokenHandler.ValidateToken(tokenRequestVm.Token,
+            var tokenCheckResult = jwtTokenHandler.ValidateToken(
+                tokenRequestVm.Token,
                 _tokenValidationParameters,
                 out var validatedToken);
 
@@ -140,9 +141,7 @@ public class AuthenticationController : ControllerBase
 
         var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
 
-
         // Store Refresh Token
-
         if (rToken != null)
             return new AuthResultVM
             {

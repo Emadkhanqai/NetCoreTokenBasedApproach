@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using NetCoreTokenBasedApproach.Data;
 using NetCoreTokenBasedApproach.Data.Models;
 
-var builder = WebApplication.CreateBuilder(args);
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
@@ -55,7 +55,7 @@ builder.Services.AddAuthentication(options =>
     options.TokenValidationParameters = tokenValidationParameters;
 });
 
-var app = builder.Build();
+WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -71,5 +71,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed Database
+AppDbInitializer.SeedRolesToDb(app).Wait();
 
 app.Run();
